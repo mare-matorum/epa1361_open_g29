@@ -22,7 +22,7 @@ def werklijn_cdf(Xlist, A):
     XL = A['Q'].values
     XL = np.append(XL, np.inf)
     # A['Q'].loc[nl + 1] = np.inf
-    
+
     # P = np.repeat(np.nan, np.size(X))
     P = np.empty(X.shape)
     P[:] = np.nan
