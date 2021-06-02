@@ -61,17 +61,13 @@ if __name__ == '__main__':
 
 #Series run RUN with reference Case
     # Define number of scenarios or reference scenario
-    scenarios = ref_scenario #can run ref scneario also
+    scenarios = ref_scenario # #SPECIFY NUMBER OF SCENARIOS OR REFERENCE CASE
     n_policies = 5
     results = perform_experiments(dike_model, scenarios, n_policies)
     experiments, outcomes = results    
    
 # print (outcomes)
 # Multiprocessing
-    n_scenarios = ref_scenario #can run ref scneario also
-    n_policies = 5
-    results = perform_experiments(dike_model, scenarios, n_policies)
-    experiments, outcomes = results   
 
 
 #    with MultiprocessingEvaluator(dike_model) as evaluator:
@@ -85,11 +81,11 @@ if __name__ == '__main__':
 #%% Save results
  # If scenarios is not a number specifying the number of scenarios, but a Policy object, assume ref scenario is run
     if isinstance(scenarios, int):
-        scenarios = n_scenarios
+        n_scenarios = scenarios
     else:
-        scenarios = 1
+        n_scenarios = 1
  
     initials= "FD"
-    fn = 'results/{} scenarios {} policies_{}.tar.gz'.format(scenarios, n_policies, initials)
+    fn = 'results/{} scenarios {} policies_{}.tar.gz'.format(n_scenarios, n_policies, initials)
     from ema_workbench import save_results
     save_results(results, fn)
