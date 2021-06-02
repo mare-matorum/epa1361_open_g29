@@ -58,16 +58,22 @@ if __name__ == '__main__':
     # print(end - start)
     # results = dike_model.outcomes_output
 
+
+#Series run RUN with reference Case
     # Define number of scenarios or reference scenario
     scenarios = ref_scenario #can run ref scneario also
     n_policies = 5
-
-#Series run
     results = perform_experiments(dike_model, scenarios, n_policies)
     experiments, outcomes = results    
    
 # print (outcomes)
-# multiprocessing
+# Multiprocessing
+    n_scenarios = ref_scenario #can run ref scneario also
+    n_policies = 5
+    results = perform_experiments(dike_model, scenarios, n_policies)
+    experiments, outcomes = results   
+
+
 #    with MultiprocessingEvaluator(dike_model) as evaluator:
 #        results = evaluator.perform_experiments(scenarios=10, policies=policy0,
 #                                                uncertainty_sampling='sobol')
@@ -79,13 +85,11 @@ if __name__ == '__main__':
 #%% Save results
  # If scenarios is not a number specifying the number of scenarios, but a Policy object, assume ref scenario is run
     if isinstance(scenarios, int):
-        n_scenarios = scenarios
+        scenarios = n_scenarios
     else:
-        n_scenarios = 1
-    
-
-    
+        scenarios = 1
+ 
     initials= "FD"
-    fn = 'results/{} scenarios {} policies_{}.tar.gz'.format(n_scenarios, n_policies, initials)
+    fn = 'results/{} scenarios {} policies_{}.tar.gz'.format(scenarios, n_policies, initials)
     from ema_workbench import save_results
     save_results(results, fn)
