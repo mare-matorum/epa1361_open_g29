@@ -58,7 +58,7 @@ if __name__ == '__main__':
 
     ###this defines policy 1 (maximally heightening all dikes)
     heightening_policy = {'DaysToThreat': 0}
-    heightening_policy.update({'DikeIncrease {}'.format(n): 10 for n in planning_steps})
+    heightening_policy.update({'DikeIncrease {}'.format(n): 5 for n in planning_steps})
     heightening_policy.update({'RfR {}'.format(n): 0 for n in planning_steps})
     
     pol1 = {}
@@ -68,7 +68,7 @@ if __name__ == '__main__':
 
     ###this defines policy 2 (only early warning system)
     warning_policy = {'DaysToThreat': 4}
-    warning_policy.update({'DikeIncrease {}'.format(n): 0 for n in planning_steps})
+    warning_policy.update({'DikeIncrease {}'.format(n): 4 for n in planning_steps})
     warning_policy.update({'RfR {}'.format(n): 0 for n in planning_steps})
     
     pol2 = {}
@@ -79,7 +79,7 @@ if __name__ == '__main__':
 
     #this defines policy 3 (a maximized approach)
     mixed_policy = {'DaysToThreat': 2}
-    mixed_policy.update({'DikeIncrease {}'.format(n): 5 for n in planning_steps})
+    mixed_policy.update({'DikeIncrease {}'.format(n): 3 for n in planning_steps})
     mixed_policy.update({'RfR {}'.format(n): 0 for n in planning_steps})
     
     pol3 = {}
