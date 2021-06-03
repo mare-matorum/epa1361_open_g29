@@ -88,18 +88,20 @@ if __name__ == '__main__':
         pol3.update({key.name: mixed_policy[s2]})    
 
     #this defines a randomized policy  (a maximized approach)
-
+    '''
+    random_policy = ({'RfR {}'.format(n): 0 for n in planning_steps})
     pol4 = {}
     for key in dike_model.levers:
         s1, s2 = key.name.split('_')
-        pol4.update({key.name: random_policy[s2]})    
+        pol4.update({key.name: random_policy[s2]})
+        
 
-
+    '''
     policy0 = Policy('Policy 0', **pol0)
     policy1 = Policy("only heightening", **pol1)
     policy2 = Policy("only evacuating", **pol2)  
     policy3 = Policy('Policy mix', **pol3)
-    policy4 = Policy('Random', **pol4)
+    #policy4 = Policy('Random', **pol4)
 
     '''
     ### here we can define some ranges for uncertainties
@@ -141,7 +143,7 @@ if __name__ == '__main__':
     #     results = evaluator.perform_experiments(scenarios=50, policies=[policy0,policy1,policy2,policy3],
     #                                             uncertainty_sampling=LHS)
     with MultiprocessingEvaluator(dike_model) as evaluator:
-        results = evaluator.perform_experiments(scenarios=50, policies=policy4,
+        results = evaluator.perform_experiments(scenarios=100, policies=[policy1,policy2,policy3],
                                                 uncertainty_sampling=LHS)
     experiments, outcomes = results
     policies = experiments['policy']
