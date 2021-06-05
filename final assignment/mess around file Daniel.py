@@ -59,7 +59,7 @@ if __name__ == '__main__':
 
     new_policy = {}
         
-
+#%%
     ###this defines policy 1 (maximally heightening all dikes)
     heightening_policy = {'DaysToThreat': 0}
     heightening_policy.update({'A.1_DikeIncrease 2'.format(n): 2 for n in planning_steps})
@@ -70,12 +70,15 @@ if __name__ == '__main__':
     for key in dike_model.levers:
         s1, s2 = key.name.split('_')
         pol1.update({key.name: heightening_policy[s2]})
+        pol1.update({'A.1_DikeIncrease 2'.format(n): 2 for n in planning_steps})
 
     ###this defines policy 2 (only early warning system)
     warning_policy = {'DaysToThreat': 4}
     warning_policy.update({'DikeIncrease {}'.format(n): 4 for n in planning_steps})
+    warning_policy.update({'DikeIncrease {}'.format(n): 4 for n in planning_steps})
     warning_policy.update({'RfR {}'.format(n): 0 for n in planning_steps})
-    
+
+#%%    
     pol2 = {}
     for key in dike_model.levers:
         s1, s2 = key.name.split('_')
