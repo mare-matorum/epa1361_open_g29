@@ -14,6 +14,8 @@ import pandas as pd
 import seaborn as sns
 from matplotlib import pyplot as plt
 
+import prim
+
 if __name__ == '__main__':
     ema_logging.log_to_stderr(ema_logging.INFO)
 
@@ -84,6 +86,9 @@ if __name__ == '__main__':
     
     sns.pairplot(data, hue='policy',  vars=outcomes.keys(), )
     plt.show()
+
+#%%
+
 
 
     

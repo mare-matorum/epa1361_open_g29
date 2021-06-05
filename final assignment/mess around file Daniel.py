@@ -23,6 +23,7 @@ from matplotlib import pyplot as plt
 from ema_workbench.em_framework.evaluators import LHS
 from ema_workbench import RealParameter, ScalarOutcome
 import numpy as np
+from ema_workbench.analysis import prim
 
 
 if __name__ == '__main__':
@@ -153,8 +154,8 @@ if __name__ == '__main__':
     with MultiprocessingEvaluator(dike_model) as evaluator:
         results = evaluator.perform_experiments(
                                                 scenarios = ref_scenario, 
-                                                policies = 1000,
-                                                uncertainty_sampling=LHS
+                                                policies = 10,
+                                                levers_sampling=LHS
                                                 )
     experiments, outcomes = results
     
@@ -188,14 +189,14 @@ if __name__ == '__main__':
     cleaned_experiments = experiments.drop(labels=[l.name for l in dike_model.levers], axis=1)
     y = (dfoutcomes['Expected Number of Deaths'] < death_threshold) & (dfoutcomes['Total costs'] > 0)
     #y.value_counts()
-    
+
     prim_alg = prim.Prim(cleaned_experiments,y, threshold=0.8)
     box1 = prim_alg.find_box()
     box1.show_tradeoff()
     plt.show()
 
-    box1.inspect(21)
-    box1.inspect(21, style='graph')
+    box1.inspect(2)
+    box1.inspect(2, style='graph')
     plt.show()
 
 
