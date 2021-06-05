@@ -22,6 +22,7 @@ import seaborn as sns
 from matplotlib import pyplot as plt
 from ema_workbench.em_framework.evaluators import LHS
 from ema_workbench import RealParameter, ScalarOutcome
+import numpy as np
 
 
 if __name__ == '__main__':
@@ -56,8 +57,12 @@ if __name__ == '__main__':
         pol0.update({key.name: zero_policy[s2]})
 
 
+    new_policy = {}
+        
+
     ###this defines policy 1 (maximally heightening all dikes)
     heightening_policy = {'DaysToThreat': 0}
+    heightening_policy.update({'A.1_DikeIncrease 2'.format(n): 2 for n in planning_steps})
     heightening_policy.update({'DikeIncrease {}'.format(n): 5 for n in planning_steps})
     heightening_policy.update({'RfR {}'.format(n): 0 for n in planning_steps})
     
@@ -105,14 +110,14 @@ if __name__ == '__main__':
 
     '''
     ### here we can define some ranges for uncertainties
-    uncertainties = [RealParameter('prey_birth_rate', 0.015, 0.035),
+    levers = [RealParameter('prey_birth_rate', 0.015, 0.035),
                      RealParameter('predation_rate', 0.0005, 0.003),
                      RealParameter('predator_efficiency', 0.001, 0.004),
                      RealParameter('predator_loss_rate', 0.04, 0.08)] 
         
     #Define the Python model
     
-    dike_model.uncertainties = uncertainties
+    dike_model.levers = levers
     '''
 
     # Call random scenarios or policies:
@@ -129,9 +134,9 @@ if __name__ == '__main__':
 
 
 #Series run RUN with reference Case
-    # Define number of scenarios or reference scenario
-    # scenarios = ref_scenario # #SPECIFY NUMBER OF SCENARIOS OR REFERENCE CASE
-    # n_policies = 5
+    #Define number of scenarios or reference scenario
+    #scenarios = ref_scenario # #SPECIFY NUMBER OF SCENARIOS OR REFERENCE CASE
+    #n_policies = 100
     # results = perform_experiments(dike_model, scenarios, n_policies)
     # experiments, outcomes = results    
    
@@ -139,21 +144,56 @@ if __name__ == '__main__':
 # Multiprocessing
 
 #%%
-    # with MultiprocessingEvaluator(dike_model) as evaluator:
+    #with MultiprocessingEvaluator(dike_model) as evaluator:
     #     results = evaluator.perform_experiments(scenarios=50, policies=[policy0,policy1,policy2,policy3],
     #                                             uncertainty_sampling=LHS)
     with MultiprocessingEvaluator(dike_model) as evaluator:
-        results = evaluator.perform_experiments(scenarios=100, policies=[policy1,policy2,policy3],
-                                                uncertainty_sampling=LHS)
+        results = evaluator.perform_experiments(
+                                                scenarios = ref_scenario, 
+                                                policies = 1000,
+                                                uncertainty_sampling=LHS
+                                                )
     experiments, outcomes = results
-    policies = experiments['policy']
     
+    
+    policies = experiments['policy'] 
     data = pd.DataFrame.from_dict(outcomes)
     data['policy'] = policies
-    
     sns.pairplot(data, hue='policy',  vars=outcomes.keys(), )
     plt.show()
+#%%
+    #This section computes total costs
+    dfoutcomes = pd.DataFrame(outcomes)
+    dfoutcomes['Total costs'] = dfoutcomes.sum(axis=1)
+    dfresults = pd.concat([experiments,dfoutcomes], axis=1)
 
+    # This section can export the results to an excelsheet.    
+    death_threshold = 0.0001
+    y = outcomes['Expected Number of Deaths'] < 0.0001
+    dfresults['Death Risk Condition < {}'.format(str(death_threshold))] = y
+
+
+    
+    #this section saves the results to excel if allowed
+    to_excel = False
+    if to_excel == True:
+        timestamp = time.strftime("%m.%d-%H%M%S")    
+        dfresults.to_excel(r'.\results{}.xlsx'.format(timestamp), index = False)
+
+#%% Prim
+    # This section sets the conditions that are acceptable for our analysis
+    cleaned_experiments = experiments.drop(labels=[l.name for l in dike_model.levers], axis=1)
+    y = (dfoutcomes['Expected Number of Deaths'] < death_threshold) & (dfoutcomes['Total costs'] > 0)
+    #y.value_counts()
+    
+    prim_alg = prim.Prim(cleaned_experiments,y, threshold=0.8)
+    box1 = prim_alg.find_box()
+    box1.show_tradeoff()
+    plt.show()
+
+    box1.inspect(21)
+    box1.inspect(21, style='graph')
+    plt.show()
 
 
 #%% Save results
@@ -169,3 +209,4 @@ if __name__ == '__main__':
     from ema_workbench import save_results
     save_results(results, fn)
 '''
+
