@@ -29,29 +29,140 @@ ema_logging.log_to_stderr(ema_logging.INFO)
 import prim
 
 
+if __name__ == '__main__':
+    ema_logging.log_to_stderr(ema_logging.INFO)
+
+    dike_model, planning_steps = get_model_for_problem_formulation(2)
+
+    # Build a user-defined scenario and policy:
+    reference_values = {'Bmax': 175, 'Brate': 1.5, 'pfail': 0.5,
+                        'ID flood wave shape': 4, 'planning steps': 2}
+    reference_values.update({'discount rate {}'.format(n): 3.5 for n in planning_steps})
+    scen1 = {}
+
+    for key in dike_model.uncertainties:
+        name_split = key.name.split('_')
+
+        if len(name_split) == 1:
+            scen1.update({key.name: reference_values[key.name]})
+
+        else:
+            scen1.update({key.name: reference_values[name_split[1]]})
+
+    ref_scenario = Scenario('reference', **scen1)
+
+    # no dike increase, no warning, none of the rfr
+    zero_policy = {'DaysToThreat': 0}
+    zero_policy.update({'DikeIncrease {}'.format(n): 0 for n in planning_steps})
+    zero_policy.update({'RfR {}'.format(n): 0 for n in planning_steps})
+    pol0 = {}
+
+    for key in dike_model.levers:
+        s1, s2 = key.name.split('_')
+        pol0.update({key.name: zero_policy[s2]})
+
+    policy0 = Policy('Policy 0', **pol0)
+    
+    with MultiprocessingEvaluator(dike_model) as evaluator:
+        results1 = evaluator.perform_experiments(scenarios = 100, 
+                                                policies = policy0)
+    experiments1, outcomes1 = results1
+    
+    sns.pairplot(pd.DataFrame.from_dict(outcomes1))
+    plt.show()
+    
+#%% visual analysis
+from ema_workbench.analysis import pairs_plotting
+
+fig, axes = pairs_plotting.pairs_scatter(experiments1, outcomes1, group_by='policy',
+                                         legend=False)
+fig.set_size_inches(8,8)
+plt.show()
+
+    
+#%% scenario discovery -  PRIM
+
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from ema_workbench.analysis import prim
+from ema_workbench import ema_logging
+ema_logging.log_to_stderr(ema_logging.INFO)
+
+x = experiments1.iloc[:, 0:50]
+outcomesdf = pd.DataFrame.from_dict(outcomes1)
+y = outcomesdf['Expected Number of Deaths'] < 1.0
+
+prim_alg = prim.Prim(x, y, threshold=0.842, peel_alpha=0.1)
+box1 = prim_alg.find_box()
+ 
+box1.show_tradeoff()
+plt.show()
+
+prim_alg = prim.Prim(x, y, threshold=0.842, peel_alpha=0.1)
+box2 = prim_alg.find_box()
+
+box2.show_pairs_scatter(10)
+plt.show()
+plt.savefig('prim expected deaths<1.png')
+
+#%% feature scoring
+
+from ema_workbench.analysis import feature_scoring
+
+x = experiments1.iloc[:, 0:50]
+y = pd.DataFrame.from_dict(outcomes1)
+
+fs = feature_scoring.get_feature_scores_all(x, y)
+sns.heatmap(fs, cmap='viridis', annot=True)
+plt.show()
+plt.savefig('feature scoring.png')
+
+#%% dimensional stacking
+
+from ema_workbench.analysis import dimensional_stacking
+
+x = experiments1.iloc[:, 0:50]
+outcomesdf = pd.DataFrame.from_dict(outcomes1)
+y = outcomesdf['Expected Number of Deaths'] < 1.0
+dimensional_stacking.create_pivot_plot(x,y, 2, nbins=3)
+plt.show()
+plt.savefig('dimensional stacking.png')
+
+#%% sensitivity analysis
+
+from ema_workbench.analysis import regional_sa
+from numpy.lib import recfunctions as rf
+
+sns.set_style('white')
+
+# model is the same across experiments
+x = experiments1.iloc[:, 0:50]
+y = outcomesdf['Expected Number of Deaths'] < 1.0
+fig = regional_sa.plot_cdfs(x,y)
+sns.despine()
+plt.show()
+plt.savefig('sensitivity analysis.png')
+
+#%%
+
+# time_horizon = 100
+
 # if __name__ == '__main__':
 #     ema_logging.log_to_stderr(ema_logging.INFO)
 
 #     dike_model, planning_steps = get_model_for_problem_formulation(2)
-
-#     # Build a user-defined scenario and policy:
-#     reference_values = {'Bmax': 175, 'Brate': 1.5, 'pfail': 0.5,
-#                         'ID flood wave shape': 4, 'planning steps': 2}
-#     reference_values.update({'discount rate {}'.format(n): 3.5 for n in planning_steps})
-#     scen1 = {}
-
-#     for key in dike_model.uncertainties:
-#         name_split = key.name.split('_')
-
-#         if len(name_split) == 1:
-#             scen1.update({key.name: reference_values[key.name]})
-
-#         else:
-#             scen1.update({key.name: reference_values[name_split[1]]})
-
-#     ref_scenario = Scenario('reference', **scen1)
-
-#     # no dike increase, no warning, none of the rfr
+    
+#     levers = [RealParameter('Bmax', 30, 350),
+#               RealParameter('Brate', 1, 10),
+#               RealParameter('pfail', 0, 1.0),
+#               RealParameter('ID flood wave shape', 0, 140),
+#               RealParameter('discount rate', 1.5, 4.5)]    
+# #how to set discount rate and Brate at set values?
+        
+#     #Define the Python model
+#     dike_model.levers = levers
+    
 #     zero_policy = {'DaysToThreat': 0}
 #     zero_policy.update({'DikeIncrease {}'.format(n): 0 for n in planning_steps})
 #     zero_policy.update({'RfR {}'.format(n): 0 for n in planning_steps})
@@ -62,48 +173,9 @@ import prim
 #         pol0.update({key.name: zero_policy[s2]})
 
 #     policy0 = Policy('Policy 0', **pol0)
-
-#%%
-time_horizon = 100
-
-if __name__ == '__main__':
-    ema_logging.log_to_stderr(ema_logging.INFO)
-
-    dike_model, planning_steps = get_model_for_problem_formulation(2)
     
-    levers = [RealParameter('Bmax', 30, 350),
-              RealParameter('Brate', 1, 10),
-              RealParameter('pfail', 0, 1.0),
-              RealParameter('ID flood wave shape', 0, 140),
-              RealParameter('discount rate', 1.5, 4.5)]    
-#how to set discount rate and Brate at set values?
-        
-    #Define the Python model
-    dike_model.levers = levers
-    
-    zero_policy = {'DaysToThreat': 0}
-    zero_policy.update({'DikeIncrease {}'.format(n): 0 for n in planning_steps})
-    zero_policy.update({'RfR {}'.format(n): 0 for n in planning_steps})
-    pol0 = {}
-
-    # for key in dike_model.levers:
-    #     s1, s2 = key.name.split('_')
-    #     pol0.update({key.name: zero_policy[s2]})
-
-    policy0 = Policy('Policy 0', **pol0)
-
-    with MultiprocessingEvaluator(dike_model) as evaluator:
-        results1 = evaluator.perform_experiments(
-                                                scenarios = 100, 
-                                                policies = policy0,
-                                                levers_sampling=LHS
 
 
-                                           )
-    experiments1, outcomes1 = results1
-    
-    sns.pairplot(pd.DataFrame.from_dict(outcomes1))
-    plt.show()
     
     # policies = experiments['policy'] 
     # data = pd.DataFrame.from_dict(outcomes)
