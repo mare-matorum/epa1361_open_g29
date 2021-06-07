@@ -22,6 +22,12 @@ import pandas as pd
 import seaborn as sns
 from matplotlib import pyplot as plt
 
+from ema_workbench.em_framework.evaluators import LHS, SOBOL, MORRIS
+from ema_workbench.analysis import feature_scoring
+from ema_workbench.analysis.scenario_discovery_util import RuleInductionType
+from ema_workbench.em_framework.salib_samplers import get_SALib_problem
+from SALib.analyze import sobol
+
 
 from ema_workbench.analysis import prim
 
@@ -93,39 +99,87 @@ if __name__ == '__main__':
 
 # Explore the behaviour of the system in the absence of any policy 
 
-n_scenarios= 1000
-policy = policy0
+    n_scenarios= 1000
+    policy = policy0
 
-with MultiprocessingEvaluator(dike_model) as evaluator:
-    results = evaluator.perform_experiments(n_scenarios, policy)
+    with MultiprocessingEvaluator(dike_model) as evaluator:
+        results = evaluator.perform_experiments(n_scenarios, policy)
             
-    experiments, outcomes = results
-    policies = experiments['policy']
+        experiments, outcomes = results
+        policies = experiments['policy']
     
 
-sns.pairplot(pd.DataFrame.from_dict(outcomes))
-plt.show()
+    sns.pairplot(pd.DataFrame.from_dict(outcomes))
+    plt.show()
 
-cleaned = experiments.loc[:, [u.name for u in dike_model.uncertainties]]
-print(cleaned)
+# Explore the effect of dike failure probability at each location to expected annual damage and deaths
 
-cleaned['Expected Number of Deaths'] = outcomes['Expected Number of Deaths']
-cleaned['']
+    cleaned = experiments.loc[:, [u.name for u in dike_model.uncertainties]]
+    print(cleaned)
 
-fig, ax = plt.subplots(figsize=(6,6))
+    cleaned['Expected Number of Deaths'] = outcomes['Expected Number of Deaths']
+    cleaned['Expected Annual Damage'] = outcomes['Expected Annual Damage']
 
-m = ax.scatter(cleaned['A.0_ID flood wave shape'], cleaned['A.1_pfail'], c=cleaned['Expected Number of Deaths'])
-ax.set_xlabel('flood wave shape')
-ax.set_ylabel('A.1 dike failure probability')
-fig.colorbar(m)
 
-plt.show()
+    fig, ax = plt.subplots(figsize=(6,6))
+
+    m = ax.scatter(cleaned['A.1_pfail'], cleaned['Expected Annual Damage'], c=cleaned['Expected Number of Deaths'])
+    ax.set_xlabel('A.1 dike failure probability')
+    ax.set_ylabel('Expected Annual Damage')
+    fig.colorbar(m)
+
+    plt.show()
 
 
 #%%
 
+# GSA method: Sobol analysis 
+
+###this defines policy 1 (maximally heightening all dikes)
+   
+    heightening_policy = {'DaysToThreat': 1}
+    heightening_policy.update({'DikeIncrease {}'.format(n): 10 for n in planning_steps})
+    heightening_policy.update({'RfR {}'.format(n): 0 for n in planning_steps})
+    
+    pol1 = {}
+    for key in dike_model.levers:
+        s1, s2 = key.name.split('_')
+        pol1.update({key.name: heightening_policy[s2]})
+
+    n_scenarios= 50
+
+    with MultiprocessingEvaluator(dike_model) as evaluator:
+        results = evaluator.perform_experiments(n_scenarios, pol1)
 
 
+#with MultiprocessingEvaluator(dike_model) as evaluator:
+ #   results = evaluator.perform_experiments(n_scenarios, policy, uncertainty_sampling=SOBOL)
+
+
+#%%
+
+    heightening_policy = {'DaysToThreat': 0}
+    heightening_policy.update({'A.1_DikeIncrease 2'.format(n): 2 for n in planning_steps})
+    heightening_policy.update({'DikeIncrease {}'.format(n): 5 for n in planning_steps})
+    heightening_policy.update({'RfR {}'.format(n): 0 for n in planning_steps})
+    
+    pol1 = {}
+    for key in dike_model.levers:
+        s1, s2 = key.name.split('_')
+        pol1.update({key.name: heightening_policy[s2]})
+        pol1.update({'A.1_DikeIncrease 2'.format(n): 6 for n in planning_steps})
+        
+        
+        
+    policy1 = Policy("only heightening", **pol1)
+    
+    n_scenarios= 50
+    
+    with MultiprocessingEvaluator(dike_model) as evaluator:
+        results = evaluator.perform_experiments(n_scenarios, policies=policy1, levers_sampling=LHS)
+                                                
+        experiments, outcomes = results
+  
 
 #%% Save results
 # this code can be used to save the experiments done, 
