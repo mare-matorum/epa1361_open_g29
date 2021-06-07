@@ -10,8 +10,10 @@ from __future__ import (unicode_literals, print_function, absolute_import,
                         division)
 
 
-from ema_workbench import (Model, MultiprocessingEvaluator, Policy,
+from ema_workbench import (Model, MultiprocessingEvaluator, Policy, IntegerParameter,
                            Scenario)
+
+import numpy as np
 
 from ema_workbench.em_framework.evaluators import perform_experiments
 from ema_workbench.em_framework.samplers import sample_uncertainties
@@ -170,15 +172,64 @@ if __name__ == '__main__':
         plt.grid()
         
     plt.show()
+    
 
+#%%
 
+# Generate random dike heightening policy with early warning system and RfR set to 0
+   
+# First comment out line 56-65 in problem_formulation file 
 
+    
+    
+    my_lever = [IntegerParameter('A.1_DikeIncrease 0', 0, 10),
+                IntegerParameter('A.1_DikeIncrease 1', 0, 10),
+                IntegerParameter('A.1_DikeIncrease 2', 0, 10),
+                IntegerParameter('A.2_DikeIncrease 0', 0, 10),
+                IntegerParameter('A.2_DikeIncrease 2', 0, 10),
+                IntegerParameter('A.3_DikeIncrease 0', 0, 10),
+                IntegerParameter('A.3_DikeIncrease 1', 0, 10),
+                IntegerParameter('A.3_DikeIncrease 2', 0, 10),
+                IntegerParameter('A.4_DikeIncrease 0', 0, 10),
+                IntegerParameter('A.4_DikeIncrease 1', 0, 10),
+                IntegerParameter('A.4_DikeIncrease 2', 0, 10),
+                IntegerParameter('A.5_DikeIncrease 0', 0, 10),
+                IntegerParameter('A.5_DikeIncrease 1', 0, 10),
+                IntegerParameter('A.5_DikeIncrease 2', 0, 10)]
+    
+    my_lever.append({'DaysToThreat': 0})
+    my_lever.append({'RfR {}'.format(n): 0 for n in planning_steps})
+    print(my_lever) 
+    
+    Policy('policy 1', **{'0_RfR 0':1,
+                          '0_RfR 1':1,
+                          '0_RfR 2':1,
+                          'A.1_DikeIncrease 0':5})
+   
+    dike_model, planning_steps = get_model_for_problem_formulation(3, my_lever)
+    
+
+    n_scenarios = 5
+    n_policies = 10
+    
+    with MultiprocessingEvaluator(dike_model) as evaluator:
+        results = evaluator.perform_experiments(n_scenarios, n_policies)
+
+    # Call random scenarios or policies:
+#    n_scenarios = 5
+#    scenarios = sample_uncertainties(dike_model, 50)
+#    n_policies = 10
+
+    # single run    
+    # start = time.time()
+    # dike_model.run_model(ref_scenario, policy0)
+    # end = time.time()
+    # print(end - start)
+    # results = dike_model.outcomes_output
 
 
 
 #%%
-
-
 
     heightening_policy = {'DaysToThreat': 0}
     heightening_policy.update({'DikeIncrease {}'.format(n): 0 for n in planning_steps})
@@ -189,19 +240,48 @@ if __name__ == '__main__':
         s1, s2 = key.name.split('_')
         pol1.update({key.name: heightening_policy[s2]})
         pol1.update({'A.1_DikeIncrease 0'.format(n): 10 for n in planning_steps})
+        pol1.update({'A.3_DikeIncrease 0'.format(n): 10 for n in planning_steps})
+
+    # for n in planning_steps:
+    #     if 'A.1_DikeIncrease {}'.format(n) == 'A.1_DikeIncrease {}'.format(planning_steps[0]):
+    #         pol1.update({'A.1_DikeIncrease {}'.format(n): 10})
         
-    policy1 = Policy("only heightening", **pol1)
-    
-    n_scenarios= 50
+    policy1 = Policy("Policy: dike 1 and 3 heightening", **pol1)
+
+    n_scenarios = 100
     
     with MultiprocessingEvaluator(dike_model) as evaluator:
-        results = evaluator.perform_experiments(ref_scenario, policies=policy1, levers_sampling=LHS)
-                                                
-        experiments, outcomes = results
+        results = evaluator.perform_experiments(n_scenarios, policy1)
         
-    sns.pairplot(pd.DataFrame.from_dict(outcomes))
+    experiments, outcomes = results
+    
+    # Dropping the last few columns to avoid messing up the analysis
+    cleaned_experiments = experiments.drop(labels=['model', 'policy', 'scenario'], axis=1)
+    
+    # Apply scenario discovery with prim
+    # Focusing on 
+   
+    data = outcomes['Expected Annual Damage']
+    
+    y = data < np.percentile(data, 10)
+    
+    prim_alg = prim.Prim(cleaned_experiments,y, threshold=0.8)
+    box1 = prim_alg.find_box()
+    
+    box1.show_tradeoff()
     plt.show()
-  
+    
+    box1.inspect(style='graph')
+    plt.show()
+    
+    
+"""
+Policy to heighten dike 1 and 3 will not be able to achieve death lower than 0.00148 over the next 60 years
+   
+    data = outcomes['Expected Number of Deaths']
+    y = data <= 0.00148
+
+"""
 
 #%% Save results
 # this code can be used to save the experiments done, 
