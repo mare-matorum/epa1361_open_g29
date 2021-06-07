@@ -133,52 +133,74 @@ if __name__ == '__main__':
 
 #%%
 
-# GSA method: Sobol analysis 
-
-###this defines policy 1 (maximally heightening all dikes)
-   
-    heightening_policy = {'DaysToThreat': 1}
-    heightening_policy.update({'DikeIncrease {}'.format(n): 10 for n in planning_steps})
-    heightening_policy.update({'RfR {}'.format(n): 0 for n in planning_steps})
-    
-    pol1 = {}
-    for key in dike_model.levers:
-        s1, s2 = key.name.split('_')
-        pol1.update({key.name: heightening_policy[s2]})
+# Sobol analysis: To investigate which model inputs add variance to the model output (expected 
+# annual damage and expected number of deaths) under no policy 
 
     n_scenarios= 50
-
+    policy = policy0
+    
     with MultiprocessingEvaluator(dike_model) as evaluator:
-        results = evaluator.perform_experiments(n_scenarios, pol1)
+        results = evaluator.perform_experiments(n_scenarios, policy, uncertainty_sampling=SOBOL)
+        
+    experiments, outcomes = results
+
+    problem = get_SALib_problem(dike_model.uncertainties)
+    y = outcomes 
+    
+    sobol_indices1 = sobol.analyze(problem, outcomes['Expected Annual Damage'])
+    sobol_indices2 = sobol.analyze(problem, outcomes['Expected Number of Deaths'])
+
+    sobol_indices_list = [sobol_indices1, sobol_indices2]
+    
+    for n in range(0,2):
+        sobol_stats = {key:sobol_indices_list[n][key] for key in ['ST', 'ST_conf', 'S1','S1_conf']}
+        sobol_stats = pd.DataFrame(sobol_stats, index=problem['names'])
+        sobol_stats.sort_values(by='ST', ascending=False)
+        
+        sns.set_style('white')
+        fig, ax = plt.subplots(1)
+        
+        indices = sobol_stats[['S1','ST']]
+        err = sobol_stats[['S1_conf','ST_conf']]
+        
+        indices.plot.bar(yerr=err.values.T,ax=ax)
+        fig.set_size_inches(8,6)
+        fig.subplots_adjust(bottom=0.3)
+        plt.ylim([0,1])
+        plt.grid()
+        
+    plt.show()
 
 
-#with MultiprocessingEvaluator(dike_model) as evaluator:
- #   results = evaluator.perform_experiments(n_scenarios, policy, uncertainty_sampling=SOBOL)
+
+
 
 
 #%%
 
+
+
     heightening_policy = {'DaysToThreat': 0}
-    heightening_policy.update({'A.1_DikeIncrease 2'.format(n): 2 for n in planning_steps})
-    heightening_policy.update({'DikeIncrease {}'.format(n): 5 for n in planning_steps})
+    heightening_policy.update({'DikeIncrease {}'.format(n): 0 for n in planning_steps})
     heightening_policy.update({'RfR {}'.format(n): 0 for n in planning_steps})
     
     pol1 = {}
     for key in dike_model.levers:
         s1, s2 = key.name.split('_')
         pol1.update({key.name: heightening_policy[s2]})
-        pol1.update({'A.1_DikeIncrease 2'.format(n): 6 for n in planning_steps})
-        
-        
+        pol1.update({'A.1_DikeIncrease 0'.format(n): 10 for n in planning_steps})
         
     policy1 = Policy("only heightening", **pol1)
     
     n_scenarios= 50
     
     with MultiprocessingEvaluator(dike_model) as evaluator:
-        results = evaluator.perform_experiments(n_scenarios, policies=policy1, levers_sampling=LHS)
+        results = evaluator.perform_experiments(ref_scenario, policies=policy1, levers_sampling=LHS)
                                                 
         experiments, outcomes = results
+        
+    sns.pairplot(pd.DataFrame.from_dict(outcomes))
+    plt.show()
   
 
 #%% Save results
