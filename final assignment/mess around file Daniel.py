@@ -57,7 +57,6 @@ if __name__ == '__main__':
         s1, s2 = key.name.split('_')
         pol0.update({key.name: zero_policy[s2]})
 
-
     new_policy = {}
         
 #%%
@@ -183,6 +182,13 @@ if __name__ == '__main__':
     if to_excel == True:
         timestamp = time.strftime("%m.%d-%H%M%S")    
         dfresults.to_excel(r'.\results{}.xlsx'.format(timestamp), index = False)
+
+    to_tar = True
+    if to_tar == True:
+        from ema_workbench import save_results
+        save_results(results, 'HyperCube_open_exploration_iterations.tar.gz')
+
+
 
 #%% Prim
     # This section sets the conditions that are acceptable for our analysis
