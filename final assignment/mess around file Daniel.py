@@ -20,11 +20,12 @@ from problem_formulation import get_model_for_problem_formulation
 import pandas as pd
 import seaborn as sns
 from matplotlib import pyplot as plt
-from ema_workbench.em_framework.evaluators import LHS
 from ema_workbench import RealParameter, ScalarOutcome
 import numpy as np
 from ema_workbench.analysis import prim
+from ema_workbench import Policy
 
+#%%
 
 if __name__ == '__main__':
     ema_logging.log_to_stderr(ema_logging.INFO)
@@ -45,7 +46,9 @@ if __name__ == '__main__':
             scen1.update({key.name: reference_values[name_split[1]]})
     ref_scenario = Scenario('reference', **scen1)
 
-   
+
+
+#%%   
     ###this defines policy 0
     # no dike increase, no warning, none of the rfr
     zero_policy = {'DaysToThreat': 0}
@@ -57,13 +60,12 @@ if __name__ == '__main__':
         s1, s2 = key.name.split('_')
         pol0.update({key.name: zero_policy[s2]})
 
-
     new_policy = {}
         
 #%%
     ###this defines policy 1 (maximally heightening all dikes)
-    heightening_policy = {'DaysToThreat': 0}
-    heightening_policy.update({'A.1_DikeIncrease 2'.format(n): 2 for n in planning_steps})
+    heightening_policy = {'DaysToThreat': 2}
+    # heightening_policy.update({'A.1_DikeIncrease 2'.format(n): 2 for n in planning_steps})
     heightening_policy.update({'DikeIncrease {}'.format(n): 5 for n in planning_steps})
     heightening_policy.update({'RfR {}'.format(n): 0 for n in planning_steps})
     
@@ -71,91 +73,35 @@ if __name__ == '__main__':
     for key in dike_model.levers:
         s1, s2 = key.name.split('_')
         pol1.update({key.name: heightening_policy[s2]})
-        pol1.update({'A.1_DikeIncrease 2'.format(n): 2 for n in planning_steps})
 
+#%%
     ###this defines policy 2 (only early warning system)
-    warning_policy = {'DaysToThreat': 4}
-    warning_policy.update({'DikeIncrease {}'.format(n): 4 for n in planning_steps})
-    warning_policy.update({'DikeIncrease {}'.format(n): 4 for n in planning_steps})
-    warning_policy.update({'RfR {}'.format(n): 0 for n in planning_steps})
-
-#%%    
+    warning_policy = {'DaysToThreat': 2}
+    warning_policy.update({'DikeIncrease {}'.format(n): 0 for n in planning_steps})
+    warning_policy.update({'RfR {}'.format(n): 1 for n in planning_steps})
+   
     pol2 = {}
     for key in dike_model.levers:
         s1, s2 = key.name.split('_')
         pol2.update({key.name: warning_policy[s2]})
 
-
-    #this defines policy 3 (a maximized approach)
-    mixed_policy = {'DaysToThreat': 2}
-    mixed_policy.update({'DikeIncrease {}'.format(n): 3 for n in planning_steps})
-    mixed_policy.update({'RfR {}'.format(n): 0 for n in planning_steps})
-    
-    pol3 = {}
-    for key in dike_model.levers:
-        s1, s2 = key.name.split('_')
-        pol3.update({key.name: mixed_policy[s2]})    
-
-    #this defines a randomized policy  (a maximized approach)
-    '''
-    random_policy = ({'RfR {}'.format(n): 0 for n in planning_steps})
-    pol4 = {}
-    for key in dike_model.levers:
-        s1, s2 = key.name.split('_')
-        pol4.update({key.name: random_policy[s2]})
-        
-
-    '''
-    policy0 = Policy('Policy 0', **pol0)
+    policy0 = Policy('Nothing', **pol0)
     policy1 = Policy("only heightening", **pol1)
-    policy2 = Policy("only evacuating", **pol2)  
-    policy3 = Policy('Policy mix', **pol3)
-    #policy4 = Policy('Random', **pol4)
+    policy2 = Policy("only room for river", **pol2)  
 
-    '''
-    ### here we can define some ranges for uncertainties
-    levers = [RealParameter('prey_birth_rate', 0.015, 0.035),
-                     RealParameter('predation_rate', 0.0005, 0.003),
-                     RealParameter('predator_efficiency', 0.001, 0.004),
-                     RealParameter('predator_loss_rate', 0.04, 0.08)] 
-        
-    #Define the Python model
+    policies = [policy0, policy1, policy2]
     
-    dike_model.levers = levers
-    '''
-
-    # Call random scenarios or policies:
-#    n_scenarios = 5
-#    scenarios = sample_uncertainties(dike_model, 50)
-#    n_policies = 10
-
-    # single run    
-    # start = time.time()
-    # dike_model.run_model(ref_scenario, policy0)
-    # end = time.time()
-    # print(end - start)
-    # results = dike_model.outcomes_output
-
-
-#Series run RUN with reference Case
-    #Define number of scenarios or reference scenario
-    #scenarios = ref_scenario # #SPECIFY NUMBER OF SCENARIOS OR REFERENCE CASE
-    #n_policies = 100
-    # results = perform_experiments(dike_model, scenarios, n_policies)
-    # experiments, outcomes = results    
-   
-# print (outcomes)
-# Multiprocessing
-
 #%%
-    #with MultiprocessingEvaluator(dike_model) as evaluator:
-    #     results = evaluator.perform_experiments(scenarios=50, policies=[policy0,policy1,policy2,policy3],
-    #                                             uncertainty_sampling=LHS)
+    # with MultiprocessingEvaluator(dike_model) as evaluator:
+    #     results = evaluator.perform_experiments(scenarios=50, 
+    #                                                 policies=
+    #                                                 [policy0,policy1,
+    #                                                   policy2,policy3])
+
     with MultiprocessingEvaluator(dike_model) as evaluator:
         results = evaluator.perform_experiments(
-                                                scenarios = ref_scenario, 
-                                                policies = 10,
-                                                levers_sampling=LHS
+                                                scenarios = 2000, 
+                                                policies = policies,
                                                 )
     experiments, outcomes = results
     
@@ -163,7 +109,7 @@ if __name__ == '__main__':
     policies = experiments['policy'] 
     data = pd.DataFrame.from_dict(outcomes)
     data['policy'] = policies
-    sns.pairplot(data, hue='policy',  vars=outcomes.keys(), )
+    sns.pairplot(data, hue='policy',  vars=outcomes.keys())
     plt.show()
 #%%
     #This section computes total costs
@@ -183,6 +129,13 @@ if __name__ == '__main__':
     if to_excel == True:
         timestamp = time.strftime("%m.%d-%H%M%S")    
         dfresults.to_excel(r'.\results{}.xlsx'.format(timestamp), index = False)
+
+    to_tar = True
+    if to_tar == True:
+        from ema_workbench import save_results
+        save_results(results, 'HyperCube_open_exploration_iterations.tar.gz')
+
+
 
 #%% Prim
     # This section sets the conditions that are acceptable for our analysis
