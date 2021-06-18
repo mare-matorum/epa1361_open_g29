@@ -4,9 +4,13 @@ This file explains the organization of the final submission folder of Group 29.
 The files are organized in folders named after the boxes in the modelling strategy.
 
 ## Folder structure
+### Containing analysis files and *important result files*
+
 The *MORDM folder* includes the script that is used to search policies using MOEAs. Furthermore, this folder includes all result files, most importantly:
 - "Optimizationresults 100K.csv": Containing optimization results from MOEA application
 - "SECOND candidate solutions MORDM 1000scenarios.tar.gz": Containing the scenarios performed for the five candidate solutions (1000 experiments for each of the 5 candidate solutions = 5000 scenarios)
+
+### Containing analysis files
 
 - The *Robustness folder* contains the Jupyter notebook used to calculate robustness based on the experiments performed for five candidate solutions.
 - The *Open exploration* folder contains files used for open exploration to gain insights into the model and possible tradeoffs.
